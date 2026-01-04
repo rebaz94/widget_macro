@@ -1,0 +1,21 @@
+name: model_macro
+description: A macro-powered simple state management solution for Dart to eliminate boilerplate.
+version: 1.0.0
+repository: https://github.com/rebaz94/widget_macro/tree/main/packages/model_macro
+topics:
+  - state-management
+  - reactivity
+  - DI
+
+environment:
+  sdk: ^3.10.0
+
+resolution: workspace
+
+dependencies:
+  macro_kit: ^0.5.6
+  collection: ^1.18.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6

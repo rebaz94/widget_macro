@@ -1,0 +1,15 @@
+name: _
+publish_to: none
+
+environment:
+  sdk: ^3.10.0
+
+workspace:
+  - packages/widget_macro
+  - packages/model_macro
+  - packages/widget_macro/example
+#  - packages/model_macro/example
+  - examples/everything
+
+dependencies:
+  macro_kit: ^0.5.6

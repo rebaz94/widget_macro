@@ -1,0 +1,6 @@
+{
+  "config": {
+    "remap_generated_file_to": "lib/gen"
+  },
+  "macros": {}
+}
