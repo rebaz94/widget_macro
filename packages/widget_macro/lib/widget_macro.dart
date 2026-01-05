@@ -16,7 +16,7 @@ export 'package:provider/provider.dart';
 // ignore: depend_on_referenced_packages
 export 'package:meta/meta.dart' show mustBeOverridden;
 
-export './src/core/annotation.dart' hide Prop;
+export './src/core/annotation.dart' hide Prop, StateFlags;
 export './src/core/base.dart' show BaseStateMixin, EffectFnInfo, MacroEffectUtils;
 export './src/core/model_macro.dart' show ModelMacro, modelMacro, modelMacroCapability;
 export './src/core/widget_state_macro.dart' show WidgetStateMacro, widgetStateMacro, widgetStateMacroCapability;

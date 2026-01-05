@@ -87,7 +87,7 @@ void main() async {
 /// ```
 Future<void> setupMacro() async {
   await runMacro(
-    package: PackageInfo('example::ex_widget_macro'),
+    package: PackageInfo('example::widget_macro_ex'),
     autoRunMacro: autoRunMacro,
     enabled: true,
     macros: {

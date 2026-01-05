@@ -1,5 +1,5 @@
 name: example
-id: ex_widget_macro
+id: widget_macro_ex
 description: "A new Flutter project."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
@@ -14,7 +14,7 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  macro_kit: ^0.5.6
+  macro_kit: ^0.5.9
   widget_macro:
     path: ..
 

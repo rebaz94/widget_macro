@@ -85,9 +85,10 @@ void main() async {
 ///   runApp(MyApp());
 /// }
 /// ```
+
 Future<void> setupMacro() async {
   await runMacro(
-    package: PackageInfo('everything'),
+    package: PackageInfo('todo'),
     autoRunMacro: autoRunMacro,
     enabled: true,
     macros: {

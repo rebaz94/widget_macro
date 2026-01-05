@@ -1,5 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:widget_macro/src/core/model_macro.dart';
 import 'package:widget_macro/src/core/widget_state_macro.dart';
+
+@internal
+class StateFlags {
+  StateFlags._();
+
+  static const int tracked = 1 << 0; // 1
+  static const int param = 1 << 1; // 2
+  static const int public = 1 << 2; // 4
+  static const int private = 1 << 3; // 8
+}
 
 /// {@template state_annotation}
 /// **State annotations** mark getters as reactive properties.
@@ -7,41 +18,102 @@ import 'package:widget_macro/src/core/widget_state_macro.dart';
 /// Annotated getters are wrapped in ValueNotifier, making them reactive.
 /// The generated notifier is named with a `State` suffix (e.g., `counter` → `counterState`).
 ///
+/// ## Visibility Control
+///
+/// By default, generated fields follow the source property's visibility:
+/// - Private property (`_counter`) → Private generated field (`_counterState`)
+/// - Public property (`counter`) → Public generated field (`counterState`)
+///
+/// You can override visibility using the `public` parameter:
+/// - `public: true` - Force public generation (strips underscore)
+/// - `public: false` - Force private generation (adds underscore)
+/// - `public: null` (default) - Follow global configuration
+///
 /// ## Available Annotations
-/// - `@state` - Creates a standard reactive state property
-/// - `@tracked` - Creates a state property that tracks previous values
-/// - `@param` - Marks a widget parameter for change tracking (WidgetStateMacro only)
-/// - `@paramTracked` - Marks a widget parameter with previous value tracking (WidgetStateMacro only)
+///
+/// ### Basic State
+/// - `@state` - Creates a standard reactive state property (follows source visibility)
+/// - `@statePublic` - Creates a public reactive state property (forces public)
+/// - `@statePrivate` - Creates a private reactive state property (forces private)
+///
+/// ### Tracked State (with previous value)
+/// - `@tracked` - Creates tracked state (follows source visibility)
+/// - `@trackedPublic` - Creates public tracked state (forces public)
+/// - `@trackedPrivate` - Creates private tracked state (forces private)
+///
+/// ### Widget Parameters (WidgetStateMacro only)
+/// - `@param` - Marks a widget parameter (follows source visibility)
+/// - `@paramPublic` - Marks a public widget parameter (forces public)
+/// - `@paramPrivate` - Marks a private widget parameter (forces private)
+/// - `@paramTracked` - Marks a tracked widget parameter (follows source visibility)
+/// - `@paramTrackedPublic` - Marks a public tracked widget parameter (forces public)
+/// - `@paramTrackedPrivate` - Marks a private tracked widget parameter (forces private)
 ///
 /// ## Examples
+///
+/// ### Default Behavior (Follow Source)
 /// ```dart
+/// // Private source → Private generated
+/// @state
+/// int get _counter => 0;
+/// // Generates: ValueNotifier<int> _counterState
+///
+/// // Public source → Public generated
 /// @state
 /// int get counter => 0;
 /// // Generates: ValueNotifier<int> counterState
-///
-/// @tracked
-/// int get history => 0;
-/// // Generates: TrackedValueNotifier<int> historyState
-/// // Access: historyState.value and historyState.previous
-///
-/// @param  // WidgetStateMacro only
-/// String get title => widget.title;
-/// // Tracks widget parameter changes
-///
-/// @paramTracked  // WidgetStateMacro only
-/// String get subtitle => widget.subtitle;
-/// // Tracks widget parameter with previous value
 /// ```
+///
+/// ### Force Public Generation
+/// ```dart
+/// // Private source → Force public generated
+/// @statePublic
+/// int get _counter => 0;
+/// // Generates: ValueNotifier<int> counterState
+///
+/// // Explicit parameter
+/// @Prop(public: true)
+/// String get _apiKey => '';
+/// // Generates: ValueNotifier<String> apiKeyState
+/// ```
+///
+/// ### Force Private Generation
+/// ```dart
+/// // Public source → Force private generated
+/// @statePrivate
+/// int get counter => 0;
+/// // Generates: ValueNotifier<int> _counterState
+///
+/// // Explicit parameter
+/// @Prop(public: false)
+/// String get apiKey => '';
+/// // Generates: ValueNotifier<String> _apiKeyState
+/// ```
+/// ## Important Notes
+/// - Use visibility overrides (`public: true/false`) only when you need different visibility than the source
+/// - Most cases should use default behavior (no `public` parameter)
+/// - Forcing public is useful for exposing private implementation details
+/// - Forcing private is useful for hiding public properties in generated code
 /// {@endtemplate}
 class Prop {
-  static const int trackedFlag = 1 << 0; // 1
-  static const int paramFlag = 1 << 1; // 2
+  /// {@macro state_annotation}
+  const Prop({
+    bool tracked = false,
+    bool? public,
+  }) : val =
+           (tracked ? StateFlags.tracked : 0) |
+           (public == true ? StateFlags.public : 0) | //
+           (public == false ? StateFlags.private : 0);
 
   /// {@macro state_annotation}
-  const Prop({bool tracked = false}) : val = tracked ? trackedFlag : 0;
-
-  /// {@macro state_annotation}
-  const Prop.param({bool tracked = false}) : val = (tracked ? trackedFlag : 0) | paramFlag;
+  const Prop.param({
+    bool tracked = false,
+    bool? public,
+  }) : val =
+           (tracked ? StateFlags.tracked : 0) |
+           (public == true ? StateFlags.public : 0) |
+           (public == false ? StateFlags.private : 0) |
+           StateFlags.param;
 
   final int val;
 }
@@ -78,13 +150,20 @@ class Prop {
 /// {@endtemplate}
 class Computed {
   /// {@macro computed_annotation}
-  const Computed.depends(List<Symbol> depends, {this.tracked}) : deps = depends;
+  const Computed.depends(
+    List<Symbol> depends, {
+    bool tracked = false,
+    bool? public,
+  }) : deps = depends,
+       val =
+           (tracked == true ? StateFlags.tracked : 0) |
+           (public == true ? StateFlags.public : 0) |
+           (public == false ? StateFlags.private : 0);
 
   /// The list of dependency name
   final List<Symbol> deps;
 
-  /// Whether to track previous value or not
-  final bool? tracked;
+  final int val;
 }
 
 /// {@template env_annotation}
@@ -138,25 +217,25 @@ class Env {
   /// Only available in WidgetStateMacro.
   ///
   /// {@macro env_annotation}
-  const Env.read() : val = 0, type = null;
+  const Env.read({this.public}) : val = 0, type = null;
 
   /// Watches a dependency from Provider/InheritedWidget and rebuilds on changes.
   /// Only available in WidgetStateMacro.
   ///
   /// {@macro env_annotation}
-  const Env.watch() : val = 1, type = null;
+  const Env.watch({this.public}) : val = 1, type = null;
 
   /// Injects a dependency from a custom source (e.g., get_it, service locator).
   /// Available in both WidgetStateMacro and ModelMacro.
   ///
   /// {@macro env_annotation}
-  const Env.custom() : val = 2, type = null;
+  const Env.custom({this.public}) : val = 2, type = null;
 
   /// Injects a custom notifier with an explicit value type.
   /// Available in both WidgetStateMacro and ModelMacro.
   ///
   /// {@macro env_annotation}
-  const Env.customNotifier(this.type) : val = 2;
+  const Env.customNotifier(this.type, {this.public}) : val = 2;
 
   /// The environment type
   final int val;
@@ -174,6 +253,11 @@ class Env {
   /// MyValueNotifier get myEnv => MyValueNotifier('value');
   /// ```
   final Type? type;
+
+  /// Whether to make generated state public or not.
+  ///
+  /// default is null, based on global configuration which is public by default
+  final bool? public;
 }
 
 /// {@template effect_annotation}
@@ -363,8 +447,13 @@ class Query {
     List<Symbol> depends, {
     this.debounce,
     this.useRefreshing,
-    this.tracked,
-  }) : deps = depends;
+    bool tracked = false,
+    bool? public,
+  }) : deps = depends,
+       val =
+           (tracked == true ? StateFlags.tracked : 0) |
+           (public == true ? StateFlags.public : 0) |
+           (public == false ? StateFlags.private : 0);
 
   /// The list of dependency names that trigger the query to re-run.
   ///
@@ -400,24 +489,50 @@ class Query {
   /// ```
   final bool? useRefreshing;
 
-  /// Whether to track previous value or not
-  final bool? tracked;
+  final int val;
 }
 
 /// {@macro state_annotation}
 const state = Prop();
 
 /// {@macro state_annotation}
+const statePublic = Prop(public: true);
+
+/// {@macro state_annotation}
+const statePrivate = Prop(public: false);
+
+/// {@macro state_annotation}
 const tracked = Prop(tracked: true);
+
+/// {@macro state_annotation}
+const trackedPublic = Prop(tracked: true, public: true);
 
 /// {@macro state_annotation}
 const param = Prop.param();
 
 /// {@macro state_annotation}
+const paramPublic = Prop.param(public: true);
+
+/// {@macro state_annotation}
+const paramPrivate = Prop.param(public: false);
+
+/// {@macro state_annotation}
 const paramTracked = Prop.param(tracked: true);
+
+/// {@macro state_annotation}
+const paramTrackedPublic = Prop.param(tracked: true, public: true);
+
+/// {@macro state_annotation}
+const paramTrackedPrivate = Prop.param(tracked: true, public: false);
 
 /// {@macro query_annotation}
 const query = Query.by([]);
+
+/// {@macro query_annotation}
+const queryPublic = Query.by([], public: true);
+
+/// {@macro query_annotation}
+const queryPrivate = Query.by([], public: false);
 
 /// Reads a dependency once from Provider/InheritedWidget (no rebuilds).
 /// Only available in WidgetStateMacro.

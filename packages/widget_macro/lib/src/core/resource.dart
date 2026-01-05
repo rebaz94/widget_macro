@@ -609,6 +609,17 @@ extension ResourceExtensions<T> on ResourceState<T> {
     );
   }
 
+  /// Attempts to synchronously get the value of [ResourceReady].
+  ///
+  /// On error or loading, will return `null`.
+  T? get valueOrNull {
+    return map(
+      ready: (r) => r.value,
+      error: (r) => null,
+      loading: (_) => null,
+    );
+  }
+
   /// Attempts to synchronously get the error of [ResourceError].
   ///
   /// On other states will return `null`.

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:macro_kit/macro_kit.dart';
+import 'package:widget_macro/src/core/config.dart';
 import 'package:widget_macro/src/core/shared.dart';
 
 /// {@template widget_state_macro}
@@ -222,6 +223,16 @@ class WidgetStateMacro extends MacroGenerator {
   static const _stateRef = r'$';
 
   @override
+  MacroGlobalConfigParser? get globalConfigParser => WidgetMacroConfig.fromJson;
+
+  WidgetMacroConfig _getConfig(MacroState state) {
+    final config = state.globalConfig;
+    if (config is WidgetMacroConfig) return config;
+
+    return WidgetMacroConfig.defaultConfig;
+  }
+
+  @override
   Future<void> init(MacroState state) async {
     if (state.targetType != TargetType.clazz) {
       throw MacroException('WidgetMacro can only be applied on class but applied on: ${state.targetType}');
@@ -337,8 +348,11 @@ class WidgetStateMacro extends MacroGenerator {
   }) {
     final dcp = dartCorePrefix;
     final fcp = flutterCorePrefix;
+    final config = _getConfig(state);
 
+    final strategy = config.stateFieldStrategy;
     final generatedStateFields = _generateStateFields(
+      strategy,
       stateFields,
       computedFields,
       envFields,
@@ -359,15 +373,9 @@ abstract class $baseStateClass extends ${fcp}State<$widgetClass> with BaseStateM
  
 $generatedStateFields
 
-  @${dcp}override
-  void initState() {
-    super.initState();
-    //
-  }
-
   void _initState() {
     final $_stateRef = this.$_stateRef;
-${_generateInitStateBody(stateFields, computedFields, envFields, effectMethods, providerPrefix)}
+${_generateInitStateBody(strategy, envFields, stateFields, computedFields, effectMethods, providerPrefix)}
   }
 
   @${dcp}override
@@ -379,19 +387,19 @@ didInitState = true;
 super.didChangeDependencies();
 return;
     }
-${_generateDidChangeDependenciesBody(envFields, effectMethods, providerPrefix)}
+${_generateDidChangeDependenciesBody(strategy, envFields, effectMethods, providerPrefix)}
     super.didChangeDependencies();
   }
 
   @${dcp}override
   void didUpdateWidget(${dcp}covariant $widgetClass old) {
-${_generateDidUpdateWidgetBody(className, stateFields)}
+${_generateDidUpdateWidgetBody(strategy, className, stateFields)}
     super.didUpdateWidget(old);
   }
 
   @${dcp}override
   void dispose() {
-${_generateDisposeBody(stateFields, computedFields, queryMethods, envFields)}
+${_generateDisposeBody(strategy, envFields, stateFields, computedFields, effectMethods, queryMethods)}
     super.dispose();
   }
 }''';
@@ -400,6 +408,7 @@ ${_generateDisposeBody(stateFields, computedFields, queryMethods, envFields)}
   }
 
   String _generateStateFields(
+    StateFieldStrategy strategy,
     List<StateFieldInfo> stateFields,
     List<ComputedFieldInfo> computedFields,
     List<EnvFieldInfo> envFields,
@@ -410,43 +419,116 @@ ${_generateDisposeBody(stateFields, computedFields, queryMethods, envFields)}
     String providerPrefix,
   ) {
     final buff = StringBuffer();
+    const dash = '--------------------';
+    const envComment = '\n// $dash Environments $dash';
+    const statesComment = '\n// $dash States $dash------';
+    const computedComment = '\n// $dash Computed $dash----';
+    const queriesComment = '\n// $dash Queries $dash';
 
-    for (final fieldInfo in stateFields) {
-      final field = fieldInfo.field;
+    if (envFields.isNotEmpty) {
+      buff.writeln(envComment);
+    }
+    for (final fieldInfo in envFields) {
+      // name without env suffix
+      final envName = fieldInfo.getGeneratedStateField(strategy);
 
-      if (fieldInfo.isGetter && fieldInfo.isPrimitive) {
-        final defaultValue = getDefaultValue(field);
-        buff.write('\n  final ${field.name}State = ${fieldInfo.notifierType(dcp)}($defaultValue);');
-      } else {
-        buff.write('\n  late final ${field.name}State = ${fieldInfo.notifierType(dcp)}($_stateRef.${field.name});');
+      switch (fieldInfo.envType) {
+        case EnvType.read:
+          buff.writeln(
+            'late final ${fieldInfo.field.getDartType(dcp)} $envName = ${providerPrefix}Provider.of(context, listen: false);',
+          );
+        case EnvType.watch:
+          buff.writeln('late ${fieldInfo.field.getDartType(dcp)} $envName;');
+        case EnvType.custom:
+          if (!fieldInfo.field.type.startsWith('ValueNotifier') && fieldInfo.customEnvDartType == null) {
+            // use regular value without listening to change
+            buff.writeln('late ${fieldInfo.field.getDartType(dcp)} $envName = $_stateRef.${fieldInfo.field.name};');
+            continue;
+          }
+
+          // field type is value notifier or class that extended value notifier and
+          // explicitly provided the inner env type
+          final baseType = fieldInfo.getUnwrappedCustomEnvType(dcp);
+          final fieldNameWithEnv = fieldInfo.field.name;
+
+          // get effects that react to change from env change
+          final effectEnv = effectMethods.where(
+            (e) => e.isEnv && (e.depends.contains(fieldNameWithEnv) || e.depends.contains(envName)),
+          );
+
+          final (envNotifierName, onChangeFnName) = fieldInfo.envNotifierWithFnName;
+          final onChangeBody = [
+            if (effectEnv.isNotEmpty && effectEnv.any((e) => e.method.params.isNotEmpty))
+              "final payload = {'${fieldInfo.cleanName}': $envName};",
+            '$envName = $envNotifierName.value;',
+            effectEnv
+                .map(
+                  (effect) => '$_stateRef.${effect.method.name}(${effect.method.params.isNotEmpty ? 'payload' : ''});',
+                )
+                .toSet()
+                .join('\n'),
+          ];
+
+          buff.writeln('''
+  late final ${fcp}ValueNotifier<$baseType> $envNotifierName = () {
+    final notifier = $_stateRef.${fieldInfo.field.name};
+    notifier.addListener($onChangeFnName);
+    return notifier;
+  }();
+  late $baseType $envName = $envNotifierName.value;
+
+  void $onChangeFnName() {
+    ${onChangeBody.join('\n')}
+    setState(() {});
+  }''');
       }
     }
 
+    if (stateFields.isNotEmpty) {
+      buff.writeln(statesComment);
+    }
+    for (final fieldInfo in stateFields) {
+      final field = fieldInfo.field;
+      // {name}State
+      final genName = fieldInfo.getGeneratedStateField(strategy);
+
+      if (fieldInfo.isGetter && fieldInfo.isPrimitive) {
+        final defaultValue = getDefaultValue(field);
+        buff.writeln('final $genName = ${fieldInfo.notifierType(dcp)}($defaultValue);');
+      } else {
+        buff.writeln('late final $genName = ${fieldInfo.notifierType(dcp)}($_stateRef.${field.name});');
+      }
+    }
+
+    if (computedFields.isNotEmpty) {
+      buff.writeln(computedComment);
+    }
     for (final fieldInfo in computedFields) {
-      final name = fieldInfo.field.name;
+      // {name}State
+      final (genName, onChangeDependsFnName) = fieldInfo.getGeneratedStateField(strategy);
+      final fieldName = fieldInfo.field.name;
       final notifierType = fieldInfo.notifierType(dcp, fcp);
 
-      buff.write('''
-
-  late final $notifierType ${name}State = () {
-    final state = $notifierType($_stateRef.$name);
-${fieldInfo.depends.map((dep) => '    $dep.addListener(\$${name}DependsRebuild);').join('\n')}
+      buff.writeln('''
+  late final $notifierType $genName = () {
+    final state = $notifierType($_stateRef.$fieldName);
+${fieldInfo.depends.map((dep) => '$dep.addListener($onChangeDependsFnName);').join('\n')}
     return state;
   }();
 
-  void \$${name}DependsRebuild() {
-    ${name}State.value = $_stateRef.$name;
+  void $onChangeDependsFnName() {
+    $genName.value = $_stateRef.$fieldName;
   }''');
     }
 
-    for (final methodInfo in queryMethods) {
-      final name = methodInfo.method.name;
-      final isPrivateMethod = name.startsWith('_');
-      final sourceNotifierName = '${isPrivateMethod ? '_\$${name.substring(1)}' : '\$$name'}Source';
-      final queryName = '${isPrivateMethod ? name.substring(1) : name}Query';
-      final sourceFnChangedName = '${sourceNotifierName}Changed';
+    if (queryMethods.isNotEmpty) {
+      buff.writeln(queriesComment);
+    }
+    for (final queryInfo in queryMethods) {
+      // {name}Query
+      final (queryName, sourceNotifierName, sourceFnChangedName) = queryInfo.getGeneratedStateField(strategy);
 
-      final methodRetType = methodInfo.method.returns.firstOrNull;
+      final methodRetType = queryInfo.method.returns.firstOrNull;
       final String resourceType;
       bool isStream = false;
       if (methodRetType == null || methodRetType.typeInfo == TypeInfo.voidType) {
@@ -460,17 +542,16 @@ ${fieldInfo.depends.map((dep) => '    $dep.addListener(\$${name}DependsRebuild);
         };
       }
 
-      buff.write('''
-
+      buff.writeln('''
   final ${fcp}ValueNotifier<${dcp}int> $sourceNotifierName = ${fcp}ValueNotifier(0);
   late final Resource<$resourceType> $queryName = (){
-    ${methodInfo.depends.map((dep) => '    $dep.addListener($sourceFnChangedName);').join('\n')}
+    ${queryInfo.depends.map((dep) => '    $dep.addListener($sourceFnChangedName);').join('\n')}
     return Resource${isStream ? '.stream' : ''}(
-      $_stateRef.$name,
+      $_stateRef.${queryInfo.method.name},
       source: $sourceNotifierName,
-      useRefreshing: ${methodInfo.useRefreshing ?? true},
-      debounceDelay: ${methodInfo.debounceDuration ?? 'null'},
-      trackPreviousState: ${methodInfo.tracked != false},
+      useRefreshing: ${queryInfo.useRefreshing ?? true},
+      debounceDelay: ${queryInfo.debounceDuration ?? 'null'},
+      trackPreviousState: ${queryInfo.isTracked},
     );
   }();
   void $sourceFnChangedName() {
@@ -478,102 +559,54 @@ ${fieldInfo.depends.map((dep) => '    $dep.addListener(\$${name}DependsRebuild);
   }''');
     }
 
-    for (final fieldInfo in envFields) {
-      // name without env suffix
-      final cleanName = fieldInfo.cleanName;
-
-      switch (fieldInfo.envType) {
-        case EnvType.read:
-          buff.write(
-            '\n  late final ${fieldInfo.field.getDartType(dcp)} $cleanName = ${providerPrefix}Provider.of(context, listen: false);',
-          );
-        case EnvType.watch:
-          buff.write('\n  late ${fieldInfo.field.getDartType(dcp)} $cleanName;');
-        case EnvType.custom:
-          if (!fieldInfo.field.type.startsWith('ValueNotifier') && fieldInfo.customEnvDartType == null) {
-            // otherwise use regular value without listening to change
-            buff.write('\n  late ${fieldInfo.field.getDartType(dcp)} $cleanName = $_stateRef.${fieldInfo.field.name};');
-            continue;
-          }
-
-          // if field type is value notifier or class with extended value notifier that
-          // explicitly provided the inner env type
-          final baseType = fieldInfo.getUnwrappedCustomEnvType(dcp);
-          final fieldNameWithEnv = fieldInfo.field.name;
-          final effectEnv = effectMethods.where(
-            (e) => e.isEnv && (e.depends.contains(fieldNameWithEnv) || e.depends.contains(cleanName)),
-          );
-
-          final onChangeBody = [
-            if (effectEnv.isNotEmpty && effectEnv.any((e) => e.method.params.isNotEmpty))
-              "final payload = {'${fieldInfo.field.name}': $cleanName};",
-            '$cleanName = \$${cleanName}Notifier.value;',
-            effectEnv
-                .map(
-                  (effect) => '$_stateRef.${effect.method.name}(${effect.method.params.isNotEmpty ? 'payload' : ''});',
-                )
-                .toSet()
-                .join('\n'),
-          ];
-
-          buff.write('''
-
-  late final ValueNotifier<$baseType> \$${cleanName}Notifier = () {
-    final notifier = $_stateRef.${fieldInfo.field.name};
-    notifier.addListener(\$${cleanName}Changed);
-    return notifier;
-  }();
-  late $baseType $cleanName = \$${cleanName}Notifier.value;
-
-  void \$${cleanName}Changed() {
-    ${onChangeBody.join('\n')}
-    setState(() {});
-  }''');
-      }
-    }
-
     return buff.toString();
   }
 
   String _generateInitStateBody(
+    StateFieldStrategy strategy,
+    List<EnvFieldInfo> envFields,
     List<StateFieldInfo> stateFields,
     List<ComputedFieldInfo> computedFields,
-    List<EnvFieldInfo> envFields,
     List<EffectMethodInfo> effectMethods,
     String providerPrefix,
   ) {
     final buff = StringBuffer();
 
-    for (final fieldInfo in stateFields) {
-      if (fieldInfo.isGetter) {
-        final name = fieldInfo.field.name;
-        buff.write('\n    ${name}State.value = $_stateRef.$name;');
+    // trigger late initialization
+    for (final fieldInfo in envFields) {
+      // name without suffix
+      final name = fieldInfo.getGeneratedStateField(strategy);
+
+      if (fieldInfo.envType == EnvType.watch) {
+        buff.writeln('$name = ${providerPrefix}Provider.of(context, listen: true);');
+      } else if (fieldInfo.field.type.startsWith('ValueNotifier') || fieldInfo.customEnvDartType != null) {
+        buff.writeln('$name;');
       }
     }
 
-    // trigger late initialization
     buff.writeln();
-    for (final fieldInfo in envFields) {
-      if (fieldInfo.envType == EnvType.watch) {
-        final cleanName = fieldInfo.cleanName;
-        buff.write('\n\n    $cleanName = ${providerPrefix}Provider.of(context, listen: true);');
-      } else if (fieldInfo.field.type.startsWith('ValueNotifier') || fieldInfo.customEnvDartType != null) {
-        buff.write('\n    ${fieldInfo.cleanName};');
+    for (final fieldInfo in stateFields) {
+      if (fieldInfo.isGetter) {
+        // {name}State
+        final name = fieldInfo.getGeneratedStateField(strategy);
+        buff.writeln('$name.value = $_stateRef.${fieldInfo.field.name};');
       }
     }
 
     // trigger late initialization
     buff.writeln();
     for (final fieldInfo in computedFields) {
-      final name = fieldInfo.field.name;
-      buff.write('\n    ${name}State;');
+      // {name}State
+      final (genName, _) = fieldInfo.getGeneratedStateField(strategy);
+      buff.writeln('$genName;');
     }
 
     buff.writeln();
     for (final methodInfo in effectMethods) {
       if (methodInfo.isEnv) continue;
+
       for (final dep in methodInfo.depends) {
-        buff.write('\n    createEffect($dep, $_stateRef.${methodInfo.method.name});');
+        buff.writeln('createEffect($dep, $_stateRef.${methodInfo.method.name});');
       }
     }
 
@@ -581,6 +614,7 @@ ${fieldInfo.depends.map((dep) => '    $dep.addListener(\$${name}DependsRebuild);
   }
 
   String _generateDidChangeDependenciesBody(
+    StateFieldStrategy strategy,
     List<EnvFieldInfo> envFields,
     List<EffectMethodInfo> effectMethods,
     String providerPrefix,
@@ -591,31 +625,33 @@ ${fieldInfo.depends.map((dep) => '    $dep.addListener(\$${name}DependsRebuild);
     final List<EffectMethodInfo> effectCalls = [];
     List<String>? oldValuesVars;
 
-    for (final field in watchEnvs) {
-      final cleanName = field.cleanName;
-      final fieldNameWithEnv = field.field.name;
+    for (final fieldInfo in watchEnvs) {
+      // name without env suffix
+      final envName = fieldInfo.getGeneratedStateField(strategy);
+      final fieldNameWithEnv = fieldInfo.field.name;
+
       final effects = effectMethods
-          .where((e) => e.isEnv && (e.depends.contains(fieldNameWithEnv) || e.depends.contains(cleanName)))
+          .where((e) => e.isEnv && (e.depends.contains(fieldNameWithEnv) || e.depends.contains(envName)))
           .toList();
       effectCalls.addAll(effects);
 
       if (effects.isNotEmpty) {
-        (oldValuesVars ??= []).add("'$fieldNameWithEnv': $cleanName,");
+        (oldValuesVars ??= []).add("'${fieldInfo.cleanName}': $envName,");
       }
 
-      buff.write('\n    $cleanName = ${providerPrefix}Provider.of(context, listen: true);');
+      buff.writeln('$envName = ${providerPrefix}Provider.of(context, listen: true);');
     }
 
     buff.writeln();
     if (effectCalls.any((e) => e.method.params.isNotEmpty)) {
-      buff = StringBuffer('\n    final payload = {${oldValuesVars?.join(', ') ?? ''}};\n\n$buff');
+      buff = StringBuffer('final payload = {${oldValuesVars?.join(', ') ?? ''}};\n\n$buff');
     }
 
     if (effectCalls.isNotEmpty) {
-      buff.write(
+      buff.writeln(
         effectCalls
             .map(
-              (effect) => '    $_stateRef.${effect.method.name}(${effect.method.params.isNotEmpty ? 'payload' : ''});',
+              (effect) => '$_stateRef.${effect.method.name}(${effect.method.params.isNotEmpty ? 'payload' : ''});',
             )
             .toSet()
             .join('\n'),
@@ -625,14 +661,21 @@ ${fieldInfo.depends.map((dep) => '    $dep.addListener(\$${name}DependsRebuild);
     return buff.toString();
   }
 
-  String _generateDidUpdateWidgetBody(String className, List<StateFieldInfo> stateFields) {
+  String _generateDidUpdateWidgetBody(
+    StateFieldStrategy strategy,
+    String className,
+    List<StateFieldInfo> stateFields,
+  ) {
     final buff = StringBuffer();
 
     for (final fieldInfo in stateFields.where((f) => f.isParam)) {
-      final name = fieldInfo.field.name;
-      buff.write('''
-    if (old.$name != widget.$name) {
-${name}State.value = widget.$name;
+      final fieldName = fieldInfo.field.name;
+      // {name}State
+      final name = fieldInfo.getGeneratedStateField(strategy);
+
+      buff.writeln('''
+    if (old.$fieldName != widget.$fieldName) {
+$name.value = widget.$fieldName;
     }
 ''');
     }
@@ -641,41 +684,81 @@ ${name}State.value = widget.$name;
   }
 
   String _generateDisposeBody(
+    StateFieldStrategy strategy,
+    List<EnvFieldInfo> envFields,
     List<StateFieldInfo> stateFields,
     List<ComputedFieldInfo> computedFields,
+    List<EffectMethodInfo> effectMethods,
     List<QueryMethodInfo> queryMethods,
-    List<EnvFieldInfo> envFields,
   ) {
     final buff = StringBuffer();
+    final states = <String>{
+      for (final fieldInfo in stateFields) fieldInfo.getGeneratedStateField(strategy),
+      for (final fieldInfo in computedFields) fieldInfo.getGeneratedStateField(strategy).$1,
+      for (final fieldInfo in queryMethods) fieldInfo.getGeneratedStateField(strategy).$1,
+    };
 
+    // dispose effects
+    for (final effect in effectMethods) {
+      if (effect.isEnv) continue;
+
+      final dependencies = effect.depends
+          .mapNonNull((dep) => states.contains(dep) ? null : 'removeEffect($dep, $_stateRef.${effect.method.name});')
+          .join('\n');
+
+      if (dependencies.isNotEmpty) {
+        buff.writeln(dependencies);
+      }
+    }
+
+    // dispose queries
+    for (final queryInfo in queryMethods) {
+      final (queryName, sourceNotifierName, sourceFnChangedName) = queryInfo.getGeneratedStateField(strategy);
+      final dependencies = queryInfo.depends
+          .mapNonNull((dep) => states.contains(dep) ? null : '$dep.removeListener($sourceFnChangedName);')
+          .join('\n');
+
+      if (dependencies.isNotEmpty) {
+        buff.writeln(dependencies);
+      }
+      buff.writeln('$queryName.dispose();');
+      buff.writeln('$sourceNotifierName.dispose();');
+    }
+
+    // dispose states
     for (final fieldInfo in stateFields) {
-      buff.write('\n    ${fieldInfo.field.name}State.dispose();');
+      // {name}State
+      final name = fieldInfo.getGeneratedStateField(strategy);
+      buff.writeln('$name.dispose();');
     }
 
+    // dispose computed
     for (final fieldInfo in computedFields) {
-      buff.write('\n    ${fieldInfo.field.name}State.dispose();');
+      // {name}State
+      final (genName, onChangeDependsFnName) = fieldInfo.getGeneratedStateField(strategy);
+      final dependencies = fieldInfo.depends
+          .mapNonNull((dep) => states.contains(dep) ? null : '$dep.removeListener($onChangeDependsFnName);')
+          .join('\n');
+
+      // dispose generated state and remove listener for added dependency
+      if (dependencies.isNotEmpty) {
+        buff.writeln(dependencies);
+      }
+      buff.writeln('$genName.dispose();');
     }
 
-    for (final methodInfo in queryMethods) {
-      final name = methodInfo.method.name;
-      final isPrivateMethod = name.startsWith('_');
-      final sourceNotifierName = '${isPrivateMethod ? '_\$${name.substring(1)}' : '\$$name'}Source';
-      final queryName = '${isPrivateMethod ? name.substring(1) : name}Query';
-
-      buff.write('\n    $queryName.dispose();');
-      buff.write('\n    $sourceNotifierName.dispose();');
-    }
-
+    // dispose env
     for (final fieldInfo in envFields.where((e) => e.envType == EnvType.custom)) {
+      // only dispose environment that its a notifier
       if (!fieldInfo.field.type.startsWith('ValueNotifier') && fieldInfo.customEnvDartType == null) {
         continue;
       }
 
-      final cleanName = fieldInfo.cleanName;
-      buff.write('\n    \$${cleanName}Notifier.removeListener(\$${cleanName}Changed);');
+      final (envNotifierName, onChangeFnName) = fieldInfo.envNotifierWithFnName;
+      buff.writeln('$envNotifierName.removeListener($onChangeFnName);');
     }
 
-    return buff.toString();
+    return buff.toString().trimRight();
   }
 }
 
