@@ -63,7 +63,7 @@ class _ToolbarState extends _BaseToolbarState {
         tabs: TodosFilter.values.map(
           (filter) {
             final todosCount = mapFilterToTodosList(filter);
-            // Each tab bar is using its specific todos count signal
+            // Each tab bar is using its specific todos count notifier
             return ValueListenableBuilder(
               valueListenable: mapFilterToTodosList(filter),
               builder: (context, child, _) {
