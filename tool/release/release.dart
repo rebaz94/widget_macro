@@ -135,7 +135,7 @@ void main(List<String> args) async {
     print('   Package: $packageName');
     print('   Version: $versionName');
     print('   Tag: $tagName');
-    print('   Release: https://github.com/rebaz94/macro_kit/releases/tag/$tagName');
+    print('   Release: https://github.com/rebaz94/widget_macro/releases/tag/$tagName');
   } catch (e) {
     print('\n❌ Error: $e');
     exit(1);
