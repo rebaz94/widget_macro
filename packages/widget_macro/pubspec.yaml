@@ -5,7 +5,7 @@ repository: https://github.com/rebaz94/widget_macro
 topics:
   - state-management
   - reactivity
-  - DI
+  - dependency-injection
 
 environment:
   sdk: ^3.10.0
