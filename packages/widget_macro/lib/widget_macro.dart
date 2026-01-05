@@ -13,8 +13,6 @@ import 'package:widget_macro/src/core/widget_state_macro.dart';
 
 export 'package:flutter/foundation.dart' show ValueNotifier, protected, mustCallSuper;
 export 'package:provider/provider.dart';
-// ignore: depend_on_referenced_packages
-export 'package:meta/meta.dart' show mustBeOverridden;
 
 export './src/core/annotation.dart' hide Prop, StateFlags;
 export './src/core/base.dart' show BaseStateMixin, EffectFnInfo, MacroEffectUtils;
