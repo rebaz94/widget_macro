@@ -12,12 +12,16 @@ abstract class _BaseTodosBodyState extends State<TodosBody> with BaseStateMixin<
   @pragma('dart2js:tryInline')
   _TodosBodyState get $ => this as _TodosBodyState;
 
+  // -------------------- Environments --------------------
+  late TodoModel todoModel;
+
   // -------------------- States --------------------------
   late final todosFilterState = ValueNotifier<TodosFilter>($.todosFilter);
 
   @mustCallSuper
   void onInitState() {
     final $ = this.$;
+    todoModel = Provider.of(context, listen: true);
 
     todosFilterState.value = $.todosFilter;
   }
@@ -31,6 +35,7 @@ abstract class _BaseTodosBodyState extends State<TodosBody> with BaseStateMixin<
       super.didChangeDependencies();
       return;
     }
+    todoModel = Provider.of(context, listen: true);
 
     super.didChangeDependencies();
   }

@@ -19,6 +19,10 @@ class TodosBody extends StatefulWidget {
 class _TodosBodyState extends _BaseTodosBodyState {
   final textController = TextEditingController();
 
+  @override
+  @Env.watch()
+  TodoModel get todoModel;
+
   @state
   TodosFilter get todosFilter => TodosFilter.all;
 
@@ -30,8 +34,6 @@ class _TodosBodyState extends _BaseTodosBodyState {
 
   @override
   Widget build(BuildContext context) {
-    final todoModel = Provider.of<TodoModel>(context);
-
     // make the active filter visible only to descendants.
     return ChangeNotifierProvider.value(
       value: todosFilterState,

@@ -75,7 +75,7 @@ class _ToolbarState extends _BaseToolbarState {
         ).toList(),
         onTap: (index) {
           // update the current active filter
-          Provider.of<ValueNotifier<TodosFilter>>(context, listen: false).value = TodosFilter.values[index];
+          currentFilter.value = TodosFilter.values[index];
         },
       ),
     );
