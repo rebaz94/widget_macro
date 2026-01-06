@@ -123,7 +123,7 @@ class _MyHomePageState extends _BaseMyHomePageState {
   /// React to environment change
   @Effect.env([#myCounterCustomWatchedEnv])
   void myCounter4EnvChanged(Map<String, Object?> oldValues) {
-    print('environment of: `myCounterCustomWatchedEnv` changed: ${myCounterCustomWatchedEnv.value}');
+    print('environment of: `myCounterCustomWatchedEnv` changed: $myCounterCustomWatched');
   }
 
   /// React to changes from any specified environment
