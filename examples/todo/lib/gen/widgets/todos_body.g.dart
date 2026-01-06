@@ -15,7 +15,8 @@ abstract class _BaseTodosBodyState extends State<TodosBody> with BaseStateMixin<
   // -------------------- States --------------------------
   late final todosFilterState = ValueNotifier<TodosFilter>($.todosFilter);
 
-  void _initState() {
+  @mustCallSuper
+  void onInitState() {
     final $ = this.$;
 
     todosFilterState.value = $.todosFilter;
@@ -24,9 +25,9 @@ abstract class _BaseTodosBodyState extends State<TodosBody> with BaseStateMixin<
   @override
   @mustCallSuper
   void didChangeDependencies() {
-    if (!didInitState) {
-      _initState();
-      didInitState = true;
+    if (!initStateCalled) {
+      onInitState();
+      initStateCalled = true;
       super.didChangeDependencies();
       return;
     }

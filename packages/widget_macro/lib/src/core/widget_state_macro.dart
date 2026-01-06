@@ -55,18 +55,20 @@ import 'package:widget_macro/src/core/shared.dart';
 ///   @Computed.depends([#counterState])
 ///   int get doubleCounter => counterState.value * 2;
 ///
-///   // Read dependency once from Provider/InheritedWidget
+///   // Read dependency once from Provider
 ///   @Env.read()
-///   MyCounter get myCounterEnv => myCounter;
+///   MyCounter get myCounter;
 ///
 ///   // Watch dependency - rebuilds when it changes
 ///   @Env.watch()
-///   MyCounter get myCounterWatchedEnv => myCounterWatched;
+///   MyCounter get myCounterWatched;
 ///
-///   // Define without `Env` suffix works
-///   @override
+///   // Define without `Env` suffix for custom lookup
 ///   @Env.watch()
-///   MyService get myService;
+///   MyService get myServiceEnv => Provider.of(context);
+///
+///   @Env.watch()
+///   ThemeData get themeEnv => Theme.of(context);
 ///
 ///   // Custom injection (e.g., get_it, service locator)
 ///   // Don't access this field directly to get the value.
@@ -178,12 +180,31 @@ import 'package:widget_macro/src/core/shared.dart';
 ///
 /// ## Important Notes
 /// - The State class must extend `_Base{WidgetName}State` (auto-generated)
-/// - Environment properties should end with `Env` suffix, or use `@override` with `super` access,
+/// - **Environment properties**: Use `Env` suffix for manual lookup OR use `@override` without implementation (defaults to Provider):
+///   ```dart
+///   // Manual lookup with Env suffix
+///   @Env.watch()
+///   ThemeData get themeEnv => Theme.of(context);
+///
+///   @Env.read()
+///   MyCounter get myCounterEnv => Provider.of(context, listen: false);
+///
+///   // Auto Provider lookup with @override (no Env suffix needed)
+///   @override
+///   @Env.read()
+///   MyCounter get myCounter;  // Uses Provider.of(context, listen: false)
+///
+///   @override
+///   @Env.watch()
+///   MyCounter get myCounterWatched;  // Uses Provider.of(context)
+///   ```
 /// - **Never access environment fields directly** (e.g., `myServiceEnv`). Always use the
 ///   generated property without the `Env` suffix (e.g., `myService`) to access the cached/resolved value
 /// - State fields automatically get a `State` suffix (e.g., `counter` → `counterState`)
+/// - Param fields automatically get a `State` suffix (e.g., `title` → `titleState`) and update when widget properties change
 /// - Query methods get a `Query` suffix (e.g., `fetchUser` → `fetchUserQuery`)
 /// - **Never invoke query methods directly**. Always use the generated query notifier (e.g., `fetchUserQuery`) which manages execution automatically
+/// - `fetchUserQuery` is a `ValueNotifier<ResourceState<T>>` - use it with any listener (ListenableBuilder, ValueListenableBuilder, or the `.state()` helper)
 /// {@endtemplate}
 class WidgetStateMacro extends MacroGenerator {
   const WidgetStateMacro({
@@ -373,7 +394,8 @@ abstract class $baseStateClass extends ${fcp}State<$widgetClass> with BaseStateM
  
 $generatedStateFields
 
-  void _initState() {
+  @${dcp}mustCallSuper
+  void onInitState() {
     final $_stateRef = this.$_stateRef;
 ${_generateInitStateBody(strategy, envFields, stateFields, computedFields, effectMethods, providerPrefix)}
   }
@@ -381,9 +403,9 @@ ${_generateInitStateBody(strategy, envFields, stateFields, computedFields, effec
   @${dcp}override
   @${dcp}mustCallSuper
   void didChangeDependencies() {
-    if (!didInitState) {
-_initState();
-didInitState = true;
+    if (!initStateCalled) {
+onInitState();
+initStateCalled = true;
 super.didChangeDependencies();
 return;
     }
@@ -434,9 +456,12 @@ ${_generateDisposeBody(strategy, envFields, stateFields, computedFields, effectM
 
       switch (fieldInfo.envType) {
         case EnvType.read:
-          buff.writeln(
-            'late final ${fieldInfo.field.getDartType(dcp)} $envName = ${providerPrefix}Provider.of(context, listen: false);',
-          );
+          final declaration = 'late final ${fieldInfo.field.getDartType(dcp)} $envName';
+          if (fieldInfo.isAbstractProperty) {
+            buff.writeln('$declaration = ${providerPrefix}Provider.of(context, listen: false);');
+          } else {
+            buff.writeln('$declaration = $_stateRef.${fieldInfo.field.name};');
+          }
         case EnvType.watch:
           buff.writeln('late ${fieldInfo.field.getDartType(dcp)} $envName;');
         case EnvType.custom:
@@ -575,12 +600,16 @@ ${fieldInfo.depends.map((dep) => '$dep.addListener($onChangeDependsFnName);').jo
     // trigger late initialization
     for (final fieldInfo in envFields) {
       // name without suffix
-      final name = fieldInfo.getGeneratedStateField(strategy);
+      final envName = fieldInfo.getGeneratedStateField(strategy);
 
       if (fieldInfo.envType == EnvType.watch) {
-        buff.writeln('$name = ${providerPrefix}Provider.of(context, listen: true);');
+        if (fieldInfo.isAbstractProperty) {
+          buff.writeln('$envName = ${providerPrefix}Provider.of(context, listen: true);');
+        } else {
+          buff.writeln('$envName = $_stateRef.${fieldInfo.field.name};');
+        }
       } else if (fieldInfo.field.type.startsWith('ValueNotifier') || fieldInfo.customEnvDartType != null) {
-        buff.writeln('$name;');
+        buff.writeln('$envName;');
       }
     }
 
@@ -639,7 +668,11 @@ ${fieldInfo.depends.map((dep) => '$dep.addListener($onChangeDependsFnName);').jo
         (oldValuesVars ??= []).add("'${fieldInfo.cleanName}': $envName,");
       }
 
-      buff.writeln('$envName = ${providerPrefix}Provider.of(context, listen: true);');
+      if (fieldInfo.isAbstractProperty) {
+        buff.writeln('$envName = ${providerPrefix}Provider.of(context, listen: true);');
+      } else {
+        buff.writeln('$envName = $_stateRef.${fieldInfo.field.name};');
+      }
     }
 
     buff.writeln();

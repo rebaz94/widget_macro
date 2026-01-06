@@ -16,7 +16,8 @@ abstract class _BaseTodoListState extends State<TodoList> with BaseStateMixin<To
   late final TodoModel todosController = Provider.of(context, listen: false);
   late ValueNotifier<TodosFilter> activeFilter;
 
-  void _initState() {
+  @mustCallSuper
+  void onInitState() {
     final $ = this.$;
     activeFilter = Provider.of(context, listen: true);
   }
@@ -24,9 +25,9 @@ abstract class _BaseTodoListState extends State<TodoList> with BaseStateMixin<To
   @override
   @mustCallSuper
   void didChangeDependencies() {
-    if (!didInitState) {
-      _initState();
-      didInitState = true;
+    if (!initStateCalled) {
+      onInitState();
+      initStateCalled = true;
       super.didChangeDependencies();
       return;
     }

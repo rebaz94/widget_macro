@@ -7,7 +7,7 @@ class MyCounter with MyCounterModel {
   MyCounter({
     required this.title,
   }) {
-    initState();
+    onInitState();
   }
 
   /// Observe title parameter
@@ -98,7 +98,7 @@ class CustomValueNotifier extends ValueNotifier<CalculatorService> {
 @modelMacro
 class CalculatorService with CalculatorServiceModel {
   CalculatorService() {
-    initState();
+    onInitState();
   }
 
   @state

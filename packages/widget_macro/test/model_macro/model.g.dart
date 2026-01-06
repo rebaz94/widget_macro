@@ -6,7 +6,7 @@
 
 part of 'model.dart';
 
-/// A mixin for [CalculatorService]. Don't forget to call [initState] in the constructor.
+/// A mixin for [CalculatorService]. Don't forget to call [onInitState] in the constructor.
 mixin CalculatorServiceModel {
   @protected
   @pragma('vm:prefer-inline')
@@ -31,12 +31,12 @@ mixin CalculatorServiceModel {
     doubleCounterState.value = $.doubleCounter;
   }
 
-  bool $initCalled = false;
+  bool $initStateCalled = false;
 
   @mustCallSuper
-  void initState() {
-    if ($initCalled) return;
-    $initCalled = true;
+  void onInitState() {
+    if ($initStateCalled) return;
+    $initStateCalled = true;
 
     final $ = this.$;
 
@@ -83,7 +83,7 @@ mixin CalculatorServiceModel {
   }
 }
 
-/// A mixin for [MyCounter]. Don't forget to call [initState] in the constructor.
+/// A mixin for [MyCounter]. Don't forget to call [onInitState] in the constructor.
 mixin MyCounterModel {
   @protected
   @pragma('vm:prefer-inline')
@@ -138,12 +138,12 @@ mixin MyCounterModel {
     doubleCounterState.value = $.doubleCounter;
   }
 
-  bool $initCalled = false;
+  bool $initStateCalled = false;
 
   @mustCallSuper
-  void initState() {
-    if ($initCalled) return;
-    $initCalled = true;
+  void onInitState() {
+    if ($initStateCalled) return;
+    $initStateCalled = true;
 
     final $ = this.$;
     calculatorService2;

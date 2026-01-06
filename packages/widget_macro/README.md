@@ -77,7 +77,8 @@ class MyPage extends StatefulWidget {
 }
 
 @widgetStateMacro
-class _MyPageState extends _BaseMyPageState { // use the generated class
+class _MyPageState extends _BaseMyPageState {
+  // use the generated class
   @state
   int get counter => 0;
 
@@ -110,7 +111,7 @@ part 'counter_model.g.dart';
 @modelMacro
 class Counter with CounterModel {
   Counter() {
-    initState();
+    onInitState();
   }
 
   @state
@@ -179,16 +180,17 @@ String get counterText => 'Count: ${counterState.value}';
 
 ```dart
 // Read once (no rebuilds)
+@override
 @Env.read()
-UserService get userServiceEnv => userService;
+UserService get userService;
 
 @override
 @Env.read()
 ShopService get shopService;
 
-// Watch and rebuild on changes
+// Watch and rebuild on changes, use the generated theme(without env suffix)
 @Env.watch()
-ThemeData get themeEnv => theme;
+ThemeData get themeEnv => Theme.of(context);
 ```
 
 #### Custom Injection (Both macros)
@@ -256,7 +258,7 @@ void onUserServiceChanged() {
 void autoReset() {
   if (counterState.value > 10) {
     untracked(
-     () => counterState.value = 0,
+          () => counterState.value = 0,
       effectFns: [autoReset],
     );
   }
@@ -335,96 +337,7 @@ Future<Data> fetch2() async {
 }
 ```
 
-## 📝 Complete Example
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:widget_macro/widget_macro.dart';
-
-part 'todo_page.g.dart';
-
-class TodoPage extends StatefulWidget {
-  const TodoPage({super.key});
-
-  @override
-  State<TodoPage> createState() => _TodoPageState();
-}
-
-@widgetStateMacro
-class _TodoPageState extends _BaseTodoPageState {
-  // State
-  @state
-  String get searchTerm => '';
-
-  @state
-  List<Todo> get todos => [];
-
-  // Computed
-  @Computed.depends([#todosState, #searchTermState])
-  List<Todo> get filteredTodos {
-    if (searchTermState.value.isEmpty) return todosState.value;
-    return todosState.value
-        .where((todo) => todo.title.contains(searchTermState.value))
-        .toList();
-  }
-
-  // Dependency Injection
-  @Env.custom()
-  TodoService get todoServiceEnv => getIt<TodoService>();
-
-  // Query with debouncing
-  @Query.by([#searchTermState], debounce: Duration(milliseconds: 300))
-  Future<List<Todo>> searchTodos() async {
-    if (searchTermState.value.isEmpty) return [];
-    return await todoService.search(searchTermState.value);
-  }
-
-  // Effect
-  @Effect.by([#searchTermState])
-  void logSearch() {
-    print('Searching for: ${searchTermState.value}');
-  }
-
-  void addTodo(String title) {
-    todosState.value = [...todosState.value, Todo(title: title)];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Todos')),
-      body: Column(
-        children: [
-          TextField(
-            onChanged: (value) => searchTermState.value = value,
-            decoration: InputDecoration(hintText: 'Search...'),
-          ),
-          Expanded(
-            child: searchTodosQuery.state(
-                  (resource) =>
-                  resource.when(
-                    ready: (todos) =>
-                        ListView.builder(
-                          itemCount: todos.length,
-                          itemBuilder: (_, i) => ListTile(title: Text(todos[i].title)),
-                        ),
-                    error: (error, _) => Center(child: Text('Error: $error')),
-                    loading: () => Center(child: CircularProgressIndicator()),
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class Todo {
-  final String title;
-
-  Todo({required this.title});
-}
-```
+Check [here](https://github.com/rebaz94/widget_macro/tree/main/examples) for more examples.
 
 ## 🎯 Best Practices
 
@@ -433,7 +346,7 @@ class Todo {
 - Always use generated property names without suffixes for access
 - Use `@tracked` when you need previous values
 - Use `debounce` for expensive queries (search, API calls)
-- Call `initState()` in ModelMacro constructors
+- Call `onInitState()` in ModelMacro constructors
 - Use `untracked()` to prevent effect recursion
 - Use exact symbol names with `State` suffix for dependencies
 

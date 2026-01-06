@@ -27,7 +27,7 @@ import 'package:widget_macro/src/core/shared.dart';
 /// @modelMacro
 /// class MyCounter with MyCounterModel {
 ///   MyCounter() {
-///     initState();
+///     onInitState();
 ///   }
 ///
 ///   // Create reactive state (generates counterState notifier)
@@ -156,8 +156,7 @@ import 'package:widget_macro/src/core/shared.dart';
 ///
 /// ## Important Notes
 /// - The class must mix in `{ClassName}Model` (auto-generated)
-/// - Must call `initState()` in constructor to initialize reactive state
-/// - Call `dispose()` when done to clean up resources
+/// - Must call `onInitState()` in constructor to initialize reactive state
 /// - Environment properties should end with `Env` suffix
 /// - State fields automatically get a `State` suffix (e.g., `counter` → `counterState`)
 /// - Query methods get a `Query` suffix (e.g., `fetchUser` → `fetchUserQuery`)
@@ -303,7 +302,7 @@ class ModelMacro extends MacroGenerator {
 
     final template =
         '''
-/// A mixin for [$className]. Don't forget to call [initState] in the constructor.
+/// A mixin for [$className]. Don't forget to call [onInitState] in the constructor.
 mixin $baseStateClass {
   @${dcp}protected
   @${dcp}pragma('vm:prefer-inline')
@@ -316,12 +315,12 @@ mixin $baseStateClass {
   
 $generatedStateFields
 
-  bool \$initCalled = false; 
+  bool \$initStateCalled = false; 
   
-  @mustCallSuper
-  void initState() {
-    if (\$initCalled) return;
-    \$initCalled = true;
+  @${dcp}mustCallSuper
+  void onInitState() {
+    if (\$initStateCalled) return;
+    \$initStateCalled = true;
     
     final $_stateRef = this.$_stateRef;
 ${_generateInitStateBody(config.stateFieldStrategy, envFields, stateFields, computedFields, effectMethods)}

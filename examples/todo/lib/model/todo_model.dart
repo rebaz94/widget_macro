@@ -12,7 +12,7 @@ class TodoModel with TodoModelModel {
   TodoModel({
     List<Todo> initialTodos = const [],
   }) {
-    initState();
+    onInitState();
     todosState.value = initialTodos;
   }
 

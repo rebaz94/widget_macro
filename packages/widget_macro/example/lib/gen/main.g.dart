@@ -13,7 +13,8 @@ abstract class _BaseMyHomePageState extends State<MyHomePage> with BaseStateMixi
   _MyHomePageState get $ => this as _MyHomePageState;
 
   // -------------------- Environments --------------------
-  late final MyCounter myCounter = Provider.of(context, listen: false);
+  late ThemeData theme;
+  late final MyCounter myCounter = $.myCounterEnv;
   late final MyCounter myCounterAnotherWay = Provider.of(context, listen: false);
   late MyCounter myCounterWatched;
   late MyCounter myCounterCustom = $.myCounterCustomEnv;
@@ -76,9 +77,11 @@ abstract class _BaseMyHomePageState extends State<MyHomePage> with BaseStateMixi
     $fetchDataSource.value++;
   }
 
-  void _initState() {
+  @mustCallSuper
+  void onInitState() {
     final $ = this.$;
-    myCounterWatched = Provider.of(context, listen: true);
+    theme = $.themeEnv;
+    myCounterWatched = $.myCounterWatchedEnv;
     myCounterCustomWatched;
     myCounterCustomNotifierWatched;
 
@@ -95,9 +98,9 @@ abstract class _BaseMyHomePageState extends State<MyHomePage> with BaseStateMixi
   @override
   @mustCallSuper
   void didChangeDependencies() {
-    if (!didInitState) {
-      _initState();
-      didInitState = true;
+    if (!initStateCalled) {
+      onInitState();
+      initStateCalled = true;
       super.didChangeDependencies();
       return;
     }
@@ -105,7 +108,8 @@ abstract class _BaseMyHomePageState extends State<MyHomePage> with BaseStateMixi
       'myCounterWatched': myCounterWatched,
     };
 
-    myCounterWatched = Provider.of(context, listen: true);
+    theme = $.themeEnv;
+    myCounterWatched = $.myCounterWatchedEnv;
 
     $.multipleEnvChanged();
     $.myCounterWatchedChanged(payload);

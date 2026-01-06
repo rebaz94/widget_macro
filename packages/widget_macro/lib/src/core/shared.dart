@@ -93,6 +93,8 @@ class EnvFieldInfo {
   final String? customEnvDartType;
   final bool? public;
 
+  bool get isAbstractProperty => field.modifier.isGetterPropertyAbstract;
+
   String? _generatedStateField;
 
   late final cleanName = field.name.endsWith('Env') ? field.name.substring(0, field.name.length - 3) : field.name;

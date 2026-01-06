@@ -47,7 +47,8 @@ abstract class _BaseToolbarState extends State<Toolbar> with BaseStateMixin<Tool
     completedTodosCountState.value = $._completedTodosCount;
   }
 
-  void _initState() {
+  @mustCallSuper
+  void onInitState() {
     final $ = this.$;
     currentFilter;
 
@@ -61,9 +62,9 @@ abstract class _BaseToolbarState extends State<Toolbar> with BaseStateMixin<Tool
   @override
   @mustCallSuper
   void didChangeDependencies() {
-    if (!didInitState) {
-      _initState();
-      didInitState = true;
+    if (!initStateCalled) {
+      onInitState();
+      initStateCalled = true;
       super.didChangeDependencies();
       return;
     }

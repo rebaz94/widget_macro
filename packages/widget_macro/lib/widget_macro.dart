@@ -12,7 +12,6 @@ library;
 import 'package:widget_macro/src/core/widget_state_macro.dart';
 
 export 'package:flutter/foundation.dart' show ValueNotifier, protected, mustCallSuper;
-export 'package:provider/provider.dart';
 
 export './src/core/annotation.dart' hide Prop, StateFlags;
 export './src/core/base.dart' show BaseStateMixin, EffectFnInfo, MacroEffectUtils;

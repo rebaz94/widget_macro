@@ -14,8 +14,9 @@ abstract class BaseMyHomePageState extends State<MyHomePage> with BaseStateMixin
 
   // -------------------- Environments --------------------
   late final MyCounter myCounter = Provider.of(context, listen: false);
-  late final MyCounter myCounterAnotherWay = Provider.of(context, listen: false);
   late MyCounter myCounter2;
+  late MyCounter myCounterCustom;
+  late final MyCounter myCounterAnotherWay = Provider.of(context, listen: false);
   late MyCounter myCounter3 = $.myCounter3Env;
   late final ValueNotifier<MyCounter> $myCounter4Notifier = () {
     final notifier = $.myCounter4Env;
@@ -63,9 +64,11 @@ abstract class BaseMyHomePageState extends State<MyHomePage> with BaseStateMixin
     $fetchDataSource.value++;
   }
 
-  void _initState() {
+  @mustCallSuper
+  void onInitState() {
     final $ = this.$;
     myCounter2 = Provider.of(context, listen: true);
+    myCounterCustom = $.myCounterCustomEnv;
     myCounter4;
 
     titleState.value = $.title;
@@ -81,20 +84,14 @@ abstract class BaseMyHomePageState extends State<MyHomePage> with BaseStateMixin
   @override
   @mustCallSuper
   void didChangeDependencies() {
-    if (!didInitState) {
-      _initState();
-      didInitState = true;
+    if (!initStateCalled) {
+      onInitState();
+      initStateCalled = true;
       super.didChangeDependencies();
       return;
     }
-    final payload = {
-      'myCounter2': myCounter2,
-    };
-
     myCounter2 = Provider.of(context, listen: true);
-
-    $.multipleEnvChanged();
-    $.myCounter2EnvChanged(payload);
+    myCounterCustom = $.myCounterCustomEnv;
 
     super.didChangeDependencies();
   }

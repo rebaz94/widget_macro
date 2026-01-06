@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:widget_macro/widget_macro.dart';
 
 import '../model_macro/model.dart';
@@ -32,17 +33,22 @@ class MyHomePageState extends BaseMyHomePageState {
   int get doubleCounter => counterState.value * 2;
 
   /// Read MyCounter using Provider
+  @override
   @Env.read()
-  MyCounter get myCounterEnv => myCounter;
+  MyCounter get myCounter;
+
+  /// Listen to dependency and update when it change
+  @override
+  @Env.watch()
+  MyCounter get myCounter2;
+
+  @Env.watch()
+  MyCounter get myCounterCustomEnv => Provider.of(context);
 
   /// environment should have suffix `Env` or declare like
   @override
   @Env.read()
-  MyCounter get myCounterAnotherWay => super.myCounterAnotherWay;
-
-  /// Listen to dependency and update when it change
-  @Env.watch()
-  MyCounter get myCounter2Env => myCounter2;
+  MyCounter get myCounterAnotherWay;
 
   /// Get dependency using any dependency injection like get_it
   /// Don't access this field directly to get the value.

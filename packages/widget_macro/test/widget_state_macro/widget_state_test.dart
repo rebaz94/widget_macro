@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:widget_macro/widget_macro.dart';
+import 'package:provider/provider.dart';
 
 import '../model_macro/model.dart';
 import 'widget_state.dart';

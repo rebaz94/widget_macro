@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:example/model.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:widget_macro/widget_macro.dart';
 
 import 'macro_context.dart' as macro;
@@ -58,18 +59,22 @@ class _MyHomePageState extends _BaseMyHomePageState {
   @Computed.depends([#counterState])
   int get doubleCounter => counterState.value * 2;
 
+  @Env.watch()
+  ThemeData get themeEnv => Theme.of(context);
+
   /// Read MyCounter using Provider
   @Env.read()
-  MyCounter get myCounterEnv => myCounter;
+  MyCounter get myCounterEnv => Provider.of(context, listen: false);
 
-  /// environment should have suffix `Env` or declare like
+  /// environment should have suffix `Env` or
+  /// declare like this, this automatically uses Provider to get the value
   @override
   @Env.read()
   MyCounter get myCounterAnotherWay;
 
   /// Listen to dependency and update when it change
   @Env.watch()
-  MyCounter get myCounterWatchedEnv => myCounterWatched;
+  MyCounter get myCounterWatchedEnv => Provider.of(context);
 
   /// Get dependency using any dependency injection like get_it
   /// Don't access this field directly to get the value.

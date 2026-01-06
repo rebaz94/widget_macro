@@ -14,7 +14,8 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  macro_kit: ^0.5.9
+  macro_kit: ^0.5.10
+  provider: ^6.1.5+1
   widget_macro:
     path: ..
 

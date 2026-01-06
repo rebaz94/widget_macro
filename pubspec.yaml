@@ -9,8 +9,7 @@ workspace:
   - packages/model_macro
   - packages/widget_macro/example
 #  - packages/model_macro/example
-  - examples/everything
   - examples/todo
 
 dependencies:
-  macro_kit: ^0.5.9
+  macro_kit: ^0.5.10

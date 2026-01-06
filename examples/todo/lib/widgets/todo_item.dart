@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:todo/domain/todo.dart';
 import 'package:todo/model/todo_model.dart';
-import 'package:widget_macro/widget_macro.dart';
 
 /// Renders a ListTile with a checkbox where you can change
 /// the "completion" status of a [Todo]

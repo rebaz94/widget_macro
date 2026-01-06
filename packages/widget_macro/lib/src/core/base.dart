@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 
 /// Base state mixin that added to generated state class
 mixin BaseStateMixin<T extends StatefulWidget> on State<T> {
-  bool didInitState = false;
+  bool initStateCalled = false;
   Set<void Function()> $untrackedFns = const {};
   EffectFnInfo? $effectFnInfo;
 

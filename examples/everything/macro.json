@@ -1,8 +1,0 @@
-{
-  "config": {
-    "remap_generated_file_to": "lib/gen",
-    "auto_rebuild_on_connect": false,
-    "always_rebuild_on_connect": false
-  },
-  "macros": {}
-}

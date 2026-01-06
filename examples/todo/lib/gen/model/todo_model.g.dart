@@ -6,7 +6,7 @@
 
 part of '../../model/todo_model.dart';
 
-/// A mixin for [TodoModel]. Don't forget to call [initState] in the constructor.
+/// A mixin for [TodoModel]. Don't forget to call [onInitState] in the constructor.
 mixin TodoModelModel {
   @protected
   @pragma('vm:prefer-inline')
@@ -41,12 +41,12 @@ mixin TodoModelModel {
     incompleteTodosState.value = $._incompleteTodos;
   }
 
-  bool $initCalled = false;
+  bool $initStateCalled = false;
 
   @mustCallSuper
-  void initState() {
-    if ($initCalled) return;
-    $initCalled = true;
+  void onInitState() {
+    if ($initStateCalled) return;
+    $initStateCalled = true;
 
     final $ = this.$;
 
