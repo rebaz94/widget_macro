@@ -106,8 +106,8 @@ import 'package:widget_macro/src/core/shared.dart';
 ///   // the argument is optional, can be removed
 ///   @Effect.env([#myServiceEnv])
 ///   void myServiceEnvChanged(Map<String, Object?> oldValues) {
-///     print('Environment myServiceEnv changed: ${myServiceEnv.value}');
-///     print('Old value: ${oldValues['myServiceEnv']}');
+///     print('Environment myServiceEnv changed: ${myService.value}');
+///     print('Old value: ${oldValues['myService']}');
 ///   }
 ///
 ///   // Using queries in methods

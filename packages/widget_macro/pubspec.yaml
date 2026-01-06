@@ -1,6 +1,6 @@
 name: widget_macro
 description: A macro-powered simple state management solution for Flutter to eliminate boilerplate.
-version: 1.0.0
+version: 1.0.1
 repository: https://github.com/rebaz94/widget_macro
 topics:
   - state-management

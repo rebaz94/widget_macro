@@ -129,8 +129,8 @@ import 'package:widget_macro/src/core/shared.dart';
 ///   // the argument is optional, can be removed
 ///   @Effect.env([#myCounter4Env])
 ///   void myCounter4EnvChanged(Map<String, Object?> oldValues) {
-///     print('Environment myCounter4Env changed: ${myCounter4Env.value}');
-///     print('Old value: ${oldValues['myCounter4Env']}');
+///     print('Environment myCounter4Env changed: ${myCounter4.value}');
+///     print('Old value: ${oldValues['myCounter4']}');
 ///   }
 ///
 ///   // Using queries in build method

@@ -19,7 +19,7 @@ import 'package:widget_macro/widget_macro.dart';
 ///
 /// **Important:** Only change the value (`true`/`false`).
 /// Do not modify the getter name or signature.
-bool get autoRunMacro => true;
+bool get autoRunMacro => false;
 
 /// Defines the command used to launch macros in a separate process.
 ///

@@ -47,7 +47,8 @@ void main() async {
 
 Future<void> setupMacro() async {
   await runMacro(
-    package: PackageInfo('your_package_name'), // TODO: Replace with your package name
+    // TODO: Replace with your package name
+    package: PackageInfo('your_package_name'),
     autoRunMacro: autoRunMacro,
     enabled: true,
     macros: {
@@ -77,6 +78,7 @@ class MyPage extends StatefulWidget {
 
 @widgetStateMacro
 class _MyPageState extends _BaseMyPageState {
+  // use the generated class
   @state
   int get counter => 0;
 
@@ -107,9 +109,8 @@ import 'package:widget_macro/widget_macro.dart';
 part 'counter_model.g.dart';
 
 @modelMacro
-class CounterModel with CounterModelModel {
-  CounterModel() {
-    // required to call initState
+class Counter with CounterModel {
+  Counter() {
     initState();
   }
 
@@ -169,7 +170,6 @@ int get doubleCounter => counterState.value * 2;
 
 @Computed.depends([#counterState], tracked: true)
 String get counterText => 'Count: ${counterState.value}';
-// Access previous: counterTextState.previous
 ```
 
 **Important:** Dependencies must use exact symbol names with `State` suffix.
@@ -240,7 +240,7 @@ void logBoth() {
 ```dart
 @Effect.env([#userServiceEnv])
 void onUserServiceChanged(Map<String, Object?> oldValues) {
-  print('Service changed from ${oldValues['userServiceEnv']}');
+  print('Service changed from ${oldValues['userService']}');
 }
 
 // Without old values
@@ -467,4 +467,4 @@ Contributions are welcome! Feel free to:
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details
+MIT License - see [LICENSE](./packages/widget_macro/LICENSE) for details
