@@ -75,7 +75,7 @@ class MyCounter with MyCounterModel {
   /// React to environment change and get old value by name of environment
   @Effect.env([#calculatorService2Env])
   void myCounter2EnvChanged(Map<String, Object?> oldValues) {
-    print('Environment of: `calculatorService2Env` changed, oldValue: ${oldValues['myCounter2Env']}');
+    print('Environment of: `calculatorService2` changed, oldValue: ${oldValues['myCounter2']}');
   }
 
   /// React to change from counterState
