@@ -10,7 +10,6 @@ class MyCounter with MyCounterModel {
     onInitState();
   }
 
-  /// Observe title parameter
   @param
   final String title;
 
