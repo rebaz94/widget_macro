@@ -16,7 +16,7 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  macro_kit: ^0.6.0
+  macro_kit: ^0.6.1
   collection: ^1.18.0
 
 dev_dependencies:

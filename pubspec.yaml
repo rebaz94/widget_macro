@@ -12,4 +12,4 @@ workspace:
   - examples/todo
 
 dependencies:
-  macro_kit: ^0.6.0
+  macro_kit: ^0.6.1

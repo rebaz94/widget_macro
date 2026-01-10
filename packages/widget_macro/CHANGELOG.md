@@ -1,3 +1,7 @@
+## 1.1.2
+
+- Update macro_kit to latest version
+
 ## 1.1.1
 
 - Update macro_kit to latest version
