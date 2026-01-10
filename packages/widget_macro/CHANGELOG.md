@@ -1,3 +1,7 @@
+## 1.1.1
+
+- Update macro_kit to latest version
+
 ## 1.1.0
 
 - **Unlocked Dependency Injection**: Use any DI solution you want! Provider is no longer a required
