@@ -1,4 +1,4 @@
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
 plugins:
-  macro_kit: ^0.6.1
+  macro_kit: ^0.7.3
