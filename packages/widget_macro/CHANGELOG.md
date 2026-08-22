@@ -1,3 +1,11 @@
+## 1.2.2
+
+- Update macro_kit to version: 0.7.7
+- 
+## 1.2.1
+
+- Update macro_kit to version: 0.7.4
+- 
 ## 1.2.0
 
 - Update macro_kit to version: 0.7.3
